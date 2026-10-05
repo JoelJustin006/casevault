@@ -41,28 +41,28 @@ Officers, forensic analysts, judges, and advocates are all scoped to what they'r
 ## Screenshots
 
 ### 🏠 Home page
-![Home page](screenshots/Screenshot-1.png)
+![Home page](Screenshot-1.png)
 
 ### 📊 Dashboard
-![Dashboard](screenshots/Screenshot-2.png)
+![Dashboard](Screenshot-2.png)
 
 ### 📁 Cases
-![Cases](screenshots/Screenshot-3.png)
+![Cases](Screenshot-3.png)
 
 ### 🔍 Evidence detail with AI narrative
-![Evidence detail](screenshots/Screenshot-4.png)
+![Evidence detail](Screenshot-4.png)
 
 ### 🕸️ Evidence linking graph
-![Evidence graph](screenshots/Screenshot-5.png)
+![Evidence graph](Screenshot-5.png)
 
 ### 🚨 Live tamper detection
-![Tamper detection](screenshots/Screenshot-6.png)
+![Tamper detection](Screenshot-6.png)
 
 ### ✅ Public verification portal
-![Public verify](screenshots/Screenshot-7.png)
+![Public verify](Screenshot-7.png)
 
 ### 📋 Case summary
-![Case summary](screenshots/Screenshot-8.png)
+![Case summary](Screenshot-8.png)
 
 ## Quick Start
 
