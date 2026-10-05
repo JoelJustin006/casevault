@@ -38,7 +38,31 @@ Officers, forensic analysts, judges, and advocates are all scoped to what they'r
 - **Auto-lockout** — 5 failed attempts trigger a 15-second freeze
 - **Security headers** — strict CSP, X-Frame-Options DENY, HSTS, Referrer-Policy
 
----
+## Screenshots
+
+### 🏠 Home page
+![Home page](screenshots/Screenshot-1.png)
+
+### 📊 Dashboard
+![Dashboard](screenshots/Screenshot-2.png)
+
+### 📁 Cases
+![Cases](screenshots/Screenshot-3.png)
+
+### 🔍 Evidence detail with AI narrative
+![Evidence detail](screenshots/Screenshot-4.png)
+
+### 🕸️ Evidence linking graph
+![Evidence graph](screenshots/Screenshot-5.png)
+
+### 🚨 Live tamper detection
+![Tamper detection](screenshots/Screenshot-6.png)
+
+### ✅ Public verification portal
+![Public verify](screenshots/Screenshot-7.png)
+
+### 📋 Case summary
+![Case summary](screenshots/Screenshot-8.png)
 
 ## Quick Start
 
