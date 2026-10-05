@@ -1,0 +1,277 @@
+{% extends 'vault/base.html' %}
+{% block title %}My Profile — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <!-- ============ HEADER CARD ============ -->
+        <div class="card p-4 p-md-5 mb-4">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                <div class="cv-dropdown-avatar" style="width:80px;height:80px;font-size:2rem;border-width:3px">
+                    {{ profile_user.first_name|default:profile_user.username|slice:":1"|upper }}
+                </div>
+                <div class="flex-grow-1">
+                    <div class="section-eyebrow">Account</div>
+                    <h1 class="display-title mb-1" style="font-size:1.8rem">
+                        {% if profile_user.get_full_name %}{{ profile_user.get_full_name }}{% else %}{{
+                        profile_user.username }}{% endif %}
+                    </h1>
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <span class="badge-role">{{ profile_user.get_role_display }}</span>
+                        {% if profile_user.badge_id %}
+                        <span class="mono" style="color:var(--cv-muted);font-size:.78rem">ID {{ profile_user.badge_id
+                            }}</span>
+                        {% endif %}
+                        <span class="small" style="color:var(--cv-muted)">
+                            <i class="bi bi-calendar3"></i> Joined {{ profile_user.date_joined|date:"M Y" }}
+                        </span>
+                    </div>
+                </div>
+                <a href="{% url 'security_dashboard' %}" class="btn btn-outline-light">
+                    <i class="bi bi-shield-lock"></i> Security Center
+                </a>
+            </div>
+        </div>
+
+        <!-- ============ STATS ============ -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background:rgba(96,165,250,.12);color:var(--cv-blue)">
+                        <i class="bi bi-cloud-upload-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-label">Uploaded</div>
+                        <div class="stat-value">{{ evidence_uploaded }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background:rgba(251,191,36,.12);color:var(--cv-amber)">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-label">In Custody</div>
+                        <div class="stat-value">{{ evidence_in_custody }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background:rgba(52,211,153,.12);color:var(--cv-accent)">
+                        <i class="bi bi-lock-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-label">Sealed</div>
+                        <div class="stat-value">{{ sealed_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background:rgba(167,139,250,.12);color:var(--cv-violet)">
+                        <i class="bi bi-link-45deg"></i>
+                    </div>
+                    <div>
+                        <div class="stat-label">Ledger Actions</div>
+                        <div class="stat-value">{{ ledger_actions }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ ACCOUNT DETAILS ============ -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card p-4 h-100">
+                    <div class="section-eyebrow mb-3">Account Details</div>
+                    <dl style="margin:0;font-size:.9rem">
+                        <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--cv-line)">
+                            <dt style="color:var(--cv-muted);font-weight:500">Username</dt>
+                            <dd class="mono" style="margin:0">{{ profile_user.username }}</dd>
+                        </div>
+                        <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--cv-line)">
+                            <dt style="color:var(--cv-muted);font-weight:500">Email</dt>
+                            <dd style="margin:0">{{ profile_user.email|default:"—" }}</dd>
+                        </div>
+                        <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--cv-line)">
+                            <dt style="color:var(--cv-muted);font-weight:500">Role</dt>
+                            <dd style="margin:0">{{ profile_user.get_role_display }}</dd>
+                        </div>
+                        <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--cv-line)">
+                            <dt style="color:var(--cv-muted);font-weight:500">Badge ID</dt>
+                            <dd class="mono" style="margin:0">{{ profile_user.badge_id|default:"—" }}</dd>
+                        </div>
+                        <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--cv-line)">
+                            <dt style="color:var(--cv-muted);font-weight:500">Rank</dt>
+                            <dd style="margin:0">{{ profile_user.rank_label }}</dd>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <dt style="color:var(--cv-muted);font-weight:500">Last Login</dt>
+                            <dd class="mono" style="margin:0;font-size:.8rem">
+                                {{ profile_user.last_login|date:"M j, Y H:i"|default:"—" }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card p-4 h-100">
+                    <div class="section-eyebrow mb-3">Security Snapshot</div>
+                    <div class="d-flex align-items-center gap-3 mb-3 p-3"
+                        style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:10px">
+                        <i class="bi bi-shield-check" style="font-size:1.5rem;color:var(--cv-accent)"></i>
+                        <div>
+                            <div style="font-weight:600;font-size:.9rem">Account active</div>
+                            <div style="font-size:.75rem;color:var(--cv-muted)">Session secured with HttpOnly cookie +
+                                CSRF</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between py-2"
+                        style="font-size:.88rem;border-bottom:1px solid var(--cv-line)">
+                        <span style="color:var(--cv-muted)">Failed login attempts</span>
+                        <span class="mono">{{ failed_logins }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2"
+                        style="font-size:.88rem;border-bottom:1px solid var(--cv-line)">
+                        <span style="color:var(--cv-muted)">Account created</span>
+                        <span class="mono" style="font-size:.78rem">{{ profile_user.date_joined|date:"M j, Y" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2" style="font-size:.88rem">
+                        <span style="color:var(--cv-muted)">Session policy</span>
+                        <span class="mono" style="font-size:.78rem">8h · expires on close</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ RECENT ACTIVITY ============ -->
+        <div class="card p-4 mb-4">
+            <div class="section-eyebrow mb-3">Recent Ledger Activity</div>
+            {% if recent_activity %}
+            <div class="timeline">
+                {% for e in recent_activity %}
+                <div class="timeline-item{% if e.action == 'TAMPER_ALERT' %} tl-danger{% endif %}">
+                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                        <strong style="font-size:.9rem">
+                            {% if e.action == 'INGEST' %}<i class="bi bi-box-arrow-in-down text-success"></i>
+                            {% elif e.action == 'DOWNLOAD' %}<i class="bi bi-download text-info"></i>
+                            {% elif e.action == 'TRANSFER' %}<i class="bi bi-arrow-left-right text-warning"></i>
+                            {% elif e.action == 'VERIFY' %}<i class="bi bi-patch-check text-success"></i>
+                            {% elif e.action == 'TAMPER_ALERT' %}<i class="bi bi-exclamation-octagon text-danger"></i>
+                            {% else %}<i class="bi bi-eye"></i>{% endif %}
+                            {{ e.get_action_display }}
+                        </strong>
+                        <span class="small mono" style="color:var(--cv-muted)">
+                            #{{ e.index }} · {{ e.timestamp|date:"M j, H:i" }}
+                        </span>
+                    </div>
+                    <div class="small" style="color:var(--cv-muted);font-size:.82rem">
+                        {% if e.evidence %}
+                        on <a href="{% url 'evidence_detail' e.evidence.pk %}">{{ e.evidence.title|truncatechars:40
+                            }}</a>
+                        {% else %}
+                        system-wide
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4" style="color:var(--cv-muted)">
+                <i class="bi bi-inbox" style="font-size:1.5rem;opacity:.4"></i>
+                <div class="mt-2 small">No ledger activity yet.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ============ DANGER ZONE ============ -->
+        <div class="card p-4" id="danger" style="border-color:rgba(248,113,113,.35)">
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-trash3-fill" style="color:var(--cv-red);font-size:1.4rem;margin-top:.15rem"></i>
+                <div>
+                    <div class="section-eyebrow mb-1" style="color:var(--cv-red)">Danger Zone</div>
+                    <h5 class="mb-1">Delete Account Permanently</h5>
+                    <p style="color:var(--cv-muted);font-size:.9rem;margin:0">
+                        This <strong style="color:var(--cv-text)">cannot be undone</strong>. Your account will be
+                        removed from the system, your personal details wiped, and your username freed for reuse.
+                        Ledger history is preserved under a placeholder so the audit chain stays intact.
+                    </p>
+                </div>
+            </div>
+
+            {% if not can_deactivate %}
+            <div class="alert alert-warning mb-3">
+                <i class="bi bi-exclamation-triangle"></i>
+                <div>
+                    You currently hold custody of <strong>{{ held_unsealed }} item(s)</strong>.
+                    Transfer or seal them before deleting.
+                </div>
+            </div>
+            <button class="btn btn-outline-secondary" disabled>
+                <i class="bi bi-lock"></i> Delete Account
+            </button>
+            {% else %}
+            <form method="post" action="{% url 'delete_account' %}" id="delete-form">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:.85rem">
+                        Type <span class="mono" style="color:var(--cv-red)">DELETE</span> to confirm
+                    </label>
+                    <input name="confirm" id="confirm-input" class="form-control" autocomplete="off"
+                        placeholder="DELETE">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:.85rem">Reason (optional, logged to ledger)</label>
+                    <input name="reason" class="form-control" placeholder="e.g. Leaving the department">
+                </div>
+                <button type="submit" class="btn btn-outline-danger" id="delete-btn" disabled>
+                    <i class="bi bi-trash3"></i> Permanently Delete My Account
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <script>
+            (function () {
+                const input = document.getElementById('confirm-input');
+                const btn = document.getElementById('delete-btn');
+                if (!input || !btn) return;
+                input.addEventListener('input', () => {
+                    btn.disabled = input.value.trim() !== 'DELETE';
+                });
+                document.getElementById('delete-form')?.addEventListener('submit', (e) => {
+                    if (!confirm('This will permanently delete your account. Continue?')) {
+                        e.preventDefault();
+                    }
+                });
+            })();
+        </script>
+
+    </div>
+</div>
+
+<script>
+    // Enable the danger button only when the typed username matches
+    (function () {
+        const input = document.getElementById('confirm-input');
+        const btn = document.getElementById('deactivate-btn');
+        if (!input || !btn) return;
+        const expected = "{{ profile_user.username|escapejs }}";
+        input.addEventListener('input', () => {
+            btn.disabled = input.value.trim() !== expected;
+        });
+        // Final safety
+        document.getElementById('deactivate-form')?.addEventListener('submit', (e) => {
+            if (!confirm('Are you absolutely sure? This action is logged to the immutable ledger.')) {
+                e.preventDefault();
+            }
+        });
+    })();
+</script>
+
+{% endblock %}

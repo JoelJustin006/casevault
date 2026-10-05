@@ -1,0 +1,94 @@
+{% extends 'vault/base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <div class="mono text-secondary">{{ ev.case_number }}</div>
+        <h3 class="mb-1">{{ ev.title }}</h3>
+        <div class="text-secondary small">{{ ev.description|default:"No description." }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'evidence_download' ev.pk %}" class="btn btn-outline-light">
+            <i class="bi bi-download"></i> Download (logged)</a>
+    </div>
+</div>
+
+{% if not file_check.ok %}
+<div class="alert alert-danger"><strong>TAMPER DETECTED.</strong> {{ file_check.reason }}</div>
+{% else %}
+<div class="alert alert-success py-2"><i class="bi bi-check-circle"></i> On-disk file matches its recorded fingerprint.
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-md-5">
+        <div class="card p-3 mb-3">
+            <h6 class="text-secondary">Integrity Fingerprint</h6>
+            <div class="mono hash">{{ ev.file_hash }}</div>
+            <hr class="border-secondary">
+            <div class="small">
+                <div><span class="text-secondary">Size:</span> {{ ev.file_size }} bytes</div>
+                <div><span class="text-secondary">Ingested by:</span> {{ ev.uploaded_by.username }}</div>
+                <div><span class="text-secondary">Ingested at:</span> {{ ev.created_at|date:"Y-m-d H:i:s" }}</div>
+                <div><span class="text-secondary">Current custodian:</span>
+                    <span class="badge badge-role">{{ ev.current_custodian.username }}</span>
+                </div>
+                {% if qr_data %}
+                <div class="mt-3 text-center">
+                    <img src="{{ qr_data }}" alt="Verification QR Code" style="width:120px;height:120px;border-radius:8px;background:white;padding:4px">
+                    <div class="text-secondary small mt-1">Scan to verify publicly</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if user.can_transfer and ev.current_custodian_id == user.id and not ev.is_sealed %}
+        <div class="card p-3">
+            <h6 class="text-secondary">Transfer Custody</h6>
+            <form method="post" action="{% url 'evidence_transfer' ev.pk %}">
+                {% csrf_token %}
+                <div class="mb-2">{{ transfer_form.new_custodian }}</div>
+                <div class="mb-2">{{ transfer_form.reason }}</div>
+                <button class="btn btn-warning w-100">Transfer &amp; Log</button>
+            </form>
+        </div>
+        {% elif ev.is_sealed %}
+        <div class="card p-3">
+            <div class="badge-status-bad d-inline-block mb-2">SEALED EVIDENCE</div>
+            <div class="small text-secondary">
+                This evidence was sealed on {{ ev.sealed_at|date:"Y-m-d H:i" }} by {{ ev.sealed_by.username }}.
+                {% if ev.seal_reason %}<br>Reason: {{ ev.seal_reason }}{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-7">
+        <div class="card p-3">
+            <h6 class="text-secondary mb-3">Chain of Custody (immutable)</h6>
+            <div class="timeline">
+                {% for e in entries %}
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>
+                            {% if e.action == 'INGEST' %}<i class="bi bi-box-arrow-in-down text-success"></i>
+                            {% elif e.action == 'DOWNLOAD' %}<i class="bi bi-download text-info"></i>
+                            {% elif e.action == 'TRANSFER' %}<i class="bi bi-arrow-left-right text-warning"></i>
+                            {% elif e.action == 'TAMPER_ALERT' %}<i class="bi bi-exclamation-octagon text-danger"></i>
+                            {% else %}<i class="bi bi-eye text-secondary"></i>{% endif %}
+                            {{ e.get_action_display }}
+                        </strong>
+                        <span class="small text-secondary">#{{ e.index }} · {{ e.timestamp|date:"Y-m-d H:i:s" }}</span>
+                    </div>
+                    <div class="small text-secondary">
+                        by <strong>{{ e.actor.username|default:"anonymous" }}</strong>
+                        {% for k, v in e.details.items %} · {{ k }}: <span class="mono">{{ v }}</span>{% endfor %}
+                    </div>
+                    <div class="mono hash" style="font-size:.7rem">block: {{ e.entry_hash }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends 'vault/base.html' %}
+{% block title %}Cases — CaseVault{% endblock %}
+{% block content %}
+
+{% if not chain.ok %}
+<div class="alert alert-danger mb-4">
+    <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+    <div><strong>Ledger integrity failure</strong> at block #{{ chain.broken_at }} — {{ chain.reason }}</div>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div>
+        <div class="section-eyebrow">Case Management</div>
+        <h1 class="page-title mb-0"><i class="bi bi-folder-fill"></i> Cases</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+        {% if user.can_ingest %}
+        <a href="{% url 'case_create' %}" class="btn btn-success">
+            <i class="bi bi-folder-plus"></i> New Case
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" style="min-width:1100px">
+            <thead>
+                <tr>
+                    <th style="width:140px">Case #</th>
+                    <th style="min-width:220px">Title</th>
+                    <th style="width:150px">Status</th>
+                    <th style="width:90px">Evidence</th>
+                    <th style="width:170px">Lead Officer</th>
+                    <th style="width:170px">Senior Officer</th>
+                    <th style="width:110px">Court Date</th>
+                    <th style="width:130px" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in cases %}
+                <tr>
+                    <td class="mono" style="white-space:nowrap">
+                        <a href="{% url 'case_public' row.case.case_number %}">{{ row.case.case_number }}</a>
+                    </td>
+                    <td style="font-weight:500">{{ row.case.title }}</td>
+                    <td>
+                        <span class="badge"
+                            style="background:{{ row.case.status_color }}22;color:{{ row.case.status_color }};border:1px solid {{ row.case.status_color }}55;padding:.35em .8em;border-radius:8px;font-weight:600;font-size:.72rem;white-space:nowrap">
+                            {{ row.case.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="mono">{{ row.evidence_count }}</td>
+                    <td>
+                        {% if row.case.lead_officer %}
+                        <i class="bi bi-person-badge me-1" style="color:var(--cv-blue)"></i>
+                        {% if row.case.lead_officer.get_full_name %}
+                        {{ row.case.lead_officer.get_full_name }}
+                        {% else %}
+                        {{ row.case.lead_officer.username }}
+                        {% endif %}
+                        {% else %}
+                        <span class="small" style="color:var(--cv-muted)">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.case.senior_officer %}
+                        <i class="bi bi-star-fill me-1" style="color:var(--cv-amber)"></i>
+                        {% if row.case.senior_officer.get_full_name %}
+                        {{ row.case.senior_officer.get_full_name }}
+                        {% else %}
+                        {{ row.case.senior_officer.username }}
+                        {% endif %}
+                        {% else %}
+                        <span class="small" style="color:var(--cv-muted)">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td class="small" style="color:var(--cv-muted);white-space:nowrap">
+                        {{ row.case.court_date|date:"Y-m-d"|default:"—" }}
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'case_public' row.case.case_number %}" class="btn btn-outline-light btn-sm">
+                                View
+                            </a>
+                            {% if user.is_senior or user.role == 'ADMIN' %}
+                            <form method="post" action="{% url 'case_delete' row.case.case_number %}"
+                                class="d-inline m-0"
+                                onsubmit="return confirm('Delete case {{ row.case.case_number }}? This removes {{ row.evidence_count }} evidence item(s). Cannot be undone.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="confirm" value="DELETE">
+                                <button class="btn btn-outline-danger btn-sm"
+                                    title="Delete case (senior officers only)">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5" style="color:var(--cv-muted)">
+                        <i class="bi bi-folder-x" style="font-size:2rem;opacity:.4"></i>
+                        <div class="mt-2">No cases yet. Click <strong>New Case</strong> to create one.</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

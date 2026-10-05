@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Custody Report — {{ ev.case_number }}</title>
+    <style>
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 11pt;
+            color: #111;
+            margin: 40px;
+            line-height: 1.5;
+        }
+
+        h1 {
+            font-size: 20pt;
+            margin: 0 0 4px 0;
+        }
+
+        h2 {
+            font-size: 13pt;
+            margin: 26px 0 10px 0;
+            border-bottom: 1px solid #d0d0d0;
+            padding-bottom: 5px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        td,
+        th {
+            border: 1px solid #d0d0d0;
+            padding: 7px 11px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 10pt;
+        }
+
+        th {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
+
+        .label {
+            color: #555;
+            width: 190px;
+        }
+
+        .mono {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 9.5pt;
+        }
+
+        .seal {
+            display: inline-block;
+            padding: 7px 16px;
+            border: 2px solid #059669;
+            color: #059669;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            font-size: 10pt;
+        }
+
+        .seal-bad {
+            border-color: #b91c1c;
+            color: #b91c1c;
+        }
+
+        .banner {
+            background: #f0fdf4;
+            border-left: 4px solid #059669;
+            padding: 12px 16px;
+            margin: 14px 0;
+        }
+
+        .banner-bad {
+            background: #fef2f2;
+            border-left-color: #b91c1c;
+        }
+
+        .footer {
+            margin-top: 36px;
+            padding-top: 14px;
+            border-top: 1px solid #d0d0d0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div style="text-align:right">
+        {% if chain.ok %}
+        <div class="seal">VERIFIED</div>
+        {% else %}
+        <div class="seal seal-bad">BROKEN</div>
+        {% endif %}
+    </div>
+
+    <h1>Evidence Integrity Certificate</h1>
+    <p class="muted">
+        Generated {{ now|date:"F j, Y, H:i" }} UTC by {{ generator.get_full_name|default:generator.username }}
+        · Ledger block #{{ entry.index }}
+    </p>
+
+    <h2>Case Information</h2>
+    <table>
+        <tr>
+            <td class="label">Case Number</td>
+            <td>{{ ev.case_number }}</td>
+        </tr>
+        <tr>
+            <td class="label">Evidence Title</td>
+            <td>{{ ev.title }}</td>
+        </tr>
+        <tr>
+            <td class="label">Category</td>
+            <td>{{ ev.get_category_display }}</td>
+        </tr>
+        <tr>
+            <td class="label">Classification</td>
+            <td>{{ ev.get_sensitivity_display }}</td>
+        </tr>
+        <tr>
+            <td class="label">Warrant Number</td>
+            <td>{{ ev.warrant_number|default:"—" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Description</td>
+            <td>{{ ev.description|default:"—" }}</td>
+        </tr>
+    </table>
+
+    <h2>Integrity Fingerprint</h2>
+    <table>
+        <tr>
+            <td class="label">SHA-256</td>
+            <td class="mono">{{ ev.file_hash }}</td>
+        </tr>
+        <tr>
+            <td class="label">File Size</td>
+            <td>{{ ev.file_size }} bytes</td>
+        </tr>
+        <tr>
+            <td class="label">Ingested At</td>
+            <td>{{ ev.created_at|date:"F j, Y, H:i:s" }} UTC</td>
+        </tr>
+        <tr>
+            <td class="label">On-Disk Check</td>
+            <td>
+                {% if file_check.ok %}
+                MATCH — file is byte-identical to the original fingerprint
+                {% else %}
+                MISMATCH — {{ file_check.reason }}
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <h2>Chain of Custody</h2>
+    <table>
+        <tr>
+            <th style="width:45px">#</th>
+            <th style="width:130px">Timestamp</th>
+            <th style="width:120px">Actor</th>
+            <th style="width:140px">Action</th>
+            <th>Block Hash</th>
+        </tr>
+        {% for e in entries %}
+        <tr>
+            <td>{{ e.index }}</td>
+            <td class="mono">{{ e.timestamp|date:"Y-m-d H:i:s" }}</td>
+            <td>{{ e.actor.get_full_name|default:e.actor.username|default:"system" }}</td>
+            <td>{{ e.get_action_display }}</td>
+            <td class="mono">{{ e.entry_hash|slice:":32" }}…</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Certification</h2>
+    <div class="banner">
+        <p style="margin:0">
+            The SHA-256 fingerprint above was computed from the raw bytes of the evidence file at the moment
+            of ingestion. Every subsequent access is recorded as a block on an append-only cryptographic hash chain.
+            Any modification to any block would invalidate all subsequent blocks. This report constitutes a business
+            record maintained in the ordinary course of operations.
+        </p>
+    </div>
+
+    <h2>Independent Verification</h2>
+    <p>
+        Upload the original file to the CaseVault public verification portal. No login or case number is required.
+        The system recomputes the SHA-256 fingerprint and compares it against the ledger.
+    </p>
+
+    <div class="footer muted">
+        CaseVault · Zero-Knowledge Chain of Custody · Report generated at ledger block
+        #{{ entry.index }} · Block hash {{ entry.entry_hash|slice:":20" }}…
+    </div>
+
+</body>
+
+</html>

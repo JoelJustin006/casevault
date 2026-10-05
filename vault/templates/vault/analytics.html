@@ -1,0 +1,155 @@
+{% extends 'vault/base.html' %}
+{% block content %}
+
+<div class="mb-4">
+    <div class="section-eyebrow">Operational Intelligence</div>
+    <h1 class="page-title mb-0"><i class="bi bi-graph-up-arrow"></i> Analytics</h1>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="stat-icon" style="background:rgba(96,165,250,.12);color:var(--cv-blue)"><i
+                    class="bi bi-archive-fill"></i></div>
+            <div>
+                <div class="stat-label">Evidence Items</div>
+                <div class="stat-value">{{ total_evidence }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="stat-icon" style="background:rgba(167,139,250,.12);color:var(--cv-violet)"><i
+                    class="bi bi-link-45deg"></i></div>
+            <div>
+                <div class="stat-label">Ledger Blocks</div>
+                <div class="stat-value">{{ total_blocks }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="stat-icon" style="background:rgba(251,191,36,.12);color:var(--cv-amber)"><i
+                    class="bi bi-folder-fill"></i></div>
+            <div>
+                <div class="stat-label">Active Cases</div>
+                <div class="stat-value">{{ total_cases }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card p-4">
+            <div class="section-eyebrow mb-3">Ledger Growth (30 days)</div>
+            <canvas id="growthChart" height="90"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-4 h-100">
+            <div class="section-eyebrow mb-3">Evidence by Category</div>
+            <canvas id="catChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-4">
+            <div class="section-eyebrow mb-3">By Classification</div>
+            <canvas id="sensChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-4">
+            <div class="section-eyebrow mb-3">Actions Logged</div>
+            <canvas id="actionChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-4">
+            <div class="section-eyebrow mb-3">Current Custody Distribution</div>
+            <canvas id="custodyChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+{{ cat_labels|json_script:"cat-labels" }}
+{{ cat_values|json_script:"cat-values" }}
+{{ sens_labels|json_script:"sens-labels" }}
+{{ sens_values|json_script:"sens-values" }}
+{{ action_labels|json_script:"action-labels" }}
+{{ action_values|json_script:"action-values" }}
+{{ custody_labels|json_script:"custody-labels" }}
+{{ custody_values|json_script:"custody-values" }}
+{{ growth_labels|json_script:"growth-labels" }}
+{{ growth_values|json_script:"growth-values" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const COLORS = ['#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#f472b6', '#fb923c'];
+    const gridColor = 'rgba(255,255,255,.05)';
+    const tickColor = '#8896b0';
+
+    Chart.defaults.color = tickColor;
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+    const j = id => JSON.parse(document.getElementById(id).textContent);
+
+    new Chart(document.getElementById('growthChart'), {
+        type: 'line',
+        data: {
+            labels: j('growth-labels'),
+            datasets: [{
+                label: 'Total blocks',
+                data: j('growth-values'),
+                borderColor: '#34d399',
+                backgroundColor: 'rgba(52,211,153,.12)',
+                fill: true, tension: .35, borderWidth: 2, pointRadius: 0,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 8 } },
+                y: { grid: { color: gridColor }, beginAtZero: true }
+            }
+        }
+    });
+
+    const doughnut = (id, labels, values) => new Chart(document.getElementById(id), {
+        type: 'doughnut',
+        data: {
+            labels: labels, datasets: [{
+                data: values,
+                backgroundColor: COLORS,
+                borderColor: '#111827', borderWidth: 2,
+            }]
+        },
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }, cutout: '65%' }
+    });
+
+    doughnut('catChart', j('cat-labels'), j('cat-values'));
+    doughnut('sensChart', j('sens-labels'), j('sens-values'));
+    doughnut('actionChart', j('action-labels'), j('action-values'));
+
+    new Chart(document.getElementById('custodyChart'), {
+        type: 'bar',
+        data: {
+            labels: j('custody-labels'),
+            datasets: [{
+                data: j('custody-values'),
+                backgroundColor: '#60a5fa',
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: gridColor }, beginAtZero: true },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

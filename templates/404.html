@@ -1,0 +1,31 @@
+{% extends 'vault/base.html' %}
+{% block title %}Not Found — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center align-items-center" style="min-height:70vh">
+    <div class="col-md-7 col-lg-6 text-center">
+
+        <div class="mb-4" style="font-size:5rem;color:var(--cv-blue);filter:drop-shadow(0 0 30px rgba(96,165,250,.5))">
+            <i class="bi bi-folder-x"></i>
+        </div>
+
+        <div class="section-eyebrow mb-2" style="color:var(--cv-blue)">Not Found · 404</div>
+        <h1 class="display-title mb-3" style="font-size:2.2rem">Page Doesn't Exist</h1>
+
+        <p class="mb-4" style="color:var(--cv-muted);font-size:1.05rem">
+            The page you're looking for may have been moved, deleted, or never existed in the vault.
+        </p>
+
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="{% url 'dashboard' %}" class="btn btn-success px-4">
+                <i class="bi bi-grid-1x2"></i> Return to Dashboard
+            </a>
+            <a href="{% url 'home' %}" class="btn btn-outline-light px-4">
+                <i class="bi bi-house"></i> Home
+            </a>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

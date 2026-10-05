@@ -1,0 +1,310 @@
+{% extends 'vault/base.html' %}
+{% block title %}{% if mode == 'create' %}New Case{% else %}Edit Case{% endif %} — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+            <div>
+                <div class="section-eyebrow">Case Management</div>
+                <h1 class="page-title mb-0">
+                    <i class="bi bi-folder-plus"></i>
+                    {% if mode == 'create' %}
+                    Create New Case
+                    {% else %}
+                    Edit Case
+                    {% endif %}
+                </h1>
+            </div>
+            <a href="{% url 'cases_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Cases
+            </a>
+        </div>
+
+        {% if mode == 'edit' and is_readonly %}
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-eye"></i>
+            <div>
+                You have <strong>read-only access</strong>. Case details cannot be modified from your role.
+            </div>
+        </div>
+        {% endif %}
+
+        {% if mode == 'edit' and can_edit_status and not can_edit_all %}
+        <div class="alert alert-warning mb-4">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                As the lead officer on this case, you can update the <strong>case status</strong> and
+                <strong>add evidence</strong>. Other details are managed by your supervising senior officer.
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card p-4 p-md-5 mb-4">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if mode == 'edit' and can_edit_status and not can_edit_all %}
+
+                <div class="section-eyebrow mb-3">Status Update</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Case Status</label>
+                        {{ form.status }}
+                        <div class="form-text">Mark the case as In Trial, Closed, or Archived as it progresses.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'cases_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" name="save_case" class="btn btn-success px-4">
+                        <i class="bi bi-check-lg"></i> Update Status
+                    </button>
+                </div>
+
+                {% else %}
+
+                <div class="section-eyebrow mb-3">Identification</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Case Number</label>
+                        {% if can_edit_all %}
+                        {{ form.case_number }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.case_number }}" readonly>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        {% if can_edit_all %}
+                        {{ form.status }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.get_status_display }}" readonly>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Title</label>
+                        {% if can_edit_all %}
+                        {{ form.title }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.title }}" readonly>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        {% if can_edit_all %}
+                        {{ form.description }}
+                        {% else %}
+                        <textarea class="form-control" rows="3" readonly>{{ case.description }}</textarea>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="section-eyebrow mb-3 mt-4">Personnel</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Officer Who Took Up the Case</label>
+                        {% if can_edit_all %}
+                        {{ form.lead_officer }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.lead_officer }}" readonly>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Supervising Senior Officer</label>
+                        {% if can_edit_all %}
+                        {{ form.senior_officer }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.senior_officer }}" readonly>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Prosecutor</label>
+                        {% if can_edit_all %}
+                        {{ form.prosecutor }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.prosecutor }}" readonly>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="section-eyebrow mb-3 mt-4">Legal Schedule</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Court Date</label>
+                        {% if can_edit_all %}
+                        {{ form.court_date }}
+                        {% else %}
+                        <input class="form-control" value="{{ case.court_date|date:'Y-m-d' }}" readonly>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if can_edit_all %}
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'cases_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" name="save_case" class="btn btn-success px-4">
+                        <i class="bi bi-check-lg"></i> Save Changes
+                    </button>
+                </div>
+                {% endif %}
+
+                {% endif %}
+            </form>
+        </div>
+
+        {% if mode == 'edit' and can_add_evidence %}
+        <div class="card p-4 p-md-5">
+            <div class="section-eyebrow mb-3">
+                <i class="bi bi-plus-circle"></i> Add Evidence to This Case
+            </div>
+            <p class="small mb-4" style="color:var(--cv-muted)">
+                Files uploaded here are attached to case <strong class="mono">{{ case.case_number }}</strong>.
+                A SHA-256 fingerprint is computed on ingest and logged to the immutable ledger.
+            </p>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Evidence Title <span style="color:var(--cv-red)">*</span></label>
+                        {% for e in ev_form.title.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                        {{ ev_form.title }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        {{ ev_form.category }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sensitivity</label>
+                        {{ ev_form.sensitivity }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Warrant Number</label>
+                        {{ ev_form.warrant_number }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">File <span style="color:var(--cv-red)">*</span></label>
+                        {{ ev_form.file }}
+                        {% for e in ev_form.file.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" name="add_evidence" class="btn btn-success px-4">
+                        <i class="bi bi-upload"></i> Add Evidence
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if mode == 'edit' and existing_evidence %}
+        <div class="card p-4 mt-4">
+            <div class="section-eyebrow mb-3">Evidence in This Case</div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>SHA-256</th>
+                            <th>Custodian</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in existing_evidence %}
+                        <tr>
+                            <td>{{ e.title }}</td>
+                            <td><span class="badge-role" style="font-size:.68rem">{{ e.get_category_display }}</span>
+                            </td>
+                            <td class="mono" style="color:var(--cv-accent);font-size:.72rem">{{ e.short_hash }}</td>
+                            <td>{{ e.current_custodian.username }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'evidence_detail' e.pk %}" class="btn btn-outline-light btn-sm">Open</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('input:not([type=checkbox]):not([type=file]), textarea, select').forEach(function (el) {
+        if (el.tagName === 'SELECT') {
+            el.classList.add('form-select');
+        } else if (!el.classList.contains('btn')) {
+            el.classList.add('form-control');
+        }
+        el.setAttribute('autocomplete', 'off');
+        el.setAttribute('autocorrect', 'off');
+        el.setAttribute('autocapitalize', 'off');
+        el.setAttribute('spellcheck', 'false');
+    });
+
+    const CATEGORY_EXTENSIONS = {
+        'CCTV': ['.mp4', '.avi', '.mkv', '.mov', '.webm', '.m4v', '.mpeg', '.mpg'],
+        'MOBILE': ['.zip', '.tar', '.gz', '.7z', '.bin', '.img'],
+        'DISK': ['.img', '.iso', '.dd', '.bin', '.e01', '.raw'],
+        'USB': ['.zip', '.tar', '.img', '.bin', '.iso'],
+        'LOG': ['.log', '.txt', '.csv', '.json', '.xml'],
+        'IMAGE': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.heic'],
+        'DOC': ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt', '.xls', '.xlsx'],
+        'OTHER': null,
+    };
+
+    const fileInput = document.getElementById('id_file');
+    const categorySel = document.getElementById('id_category');
+
+    let fileErrorEl = null;
+    if (fileInput) {
+        fileErrorEl = document.createElement('div');
+        fileErrorEl.className = 'text-danger small mt-1';
+        fileErrorEl.style.display = 'none';
+        fileInput.parentNode.insertBefore(fileErrorEl, fileInput.nextSibling);
+    }
+
+    function validateFile() {
+        if (!fileInput || !categorySel || !fileErrorEl) return;
+        const file = fileInput.files[0];
+        const category = categorySel.value;
+        const allowed = CATEGORY_EXTENSIONS[category];
+
+        if (!file || !allowed) {
+            fileErrorEl.style.display = 'none';
+            fileErrorEl.textContent = '';
+            return;
+        }
+
+        const name = file.name.toLowerCase();
+        const ok = allowed.some(ext => name.endsWith(ext));
+
+        if (!ok) {
+            const niceCategory = categorySel.options[categorySel.selectedIndex].text;
+            fileErrorEl.textContent =
+                'File type mismatch. "' + niceCategory + '" expects: ' +
+                allowed.join(', ') + '. You picked: ' + file.name;
+            fileErrorEl.style.display = 'block';
+        } else {
+            fileErrorEl.style.display = 'none';
+            fileErrorEl.textContent = '';
+        }
+    }
+
+    if (fileInput) fileInput.addEventListener('change', validateFile);
+    if (categorySel) categorySel.addEventListener('change', validateFile);
+    validateFile();
+</script>
+
+{% endblock %}

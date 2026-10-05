@@ -1,0 +1,178 @@
+{% extends 'vault/base.html' %}
+{% block title %}Register — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center align-items-center" style="min-height: 72vh;">
+    <div class="col-md-7 col-lg-6">
+
+        <div class="text-center mb-4">
+            <div style="font-size:2.4rem;color:var(--cv-accent);filter:drop-shadow(0 0 20px rgba(52,211,153,.5))">
+                <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <h1 class="display-title mt-2 mb-1" style="font-size:1.7rem">Create Account</h1>
+            <p class="section-eyebrow mb-0">Authorised Personnel Only</p>
+        </div>
+
+        <div class="card p-4">
+            <form method="post" autocomplete="off">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 mb-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <div>{{ form.non_field_errors.0 }}</div>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label">Username <span style="color:var(--cv-red)">*</span></label>
+                    {{ form.username }}
+                    <div class="form-text">150 characters or fewer. Letters, digits and @/./+/-/_ only.</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First Name</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last Name</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    {{ form.email }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Badge ID</label>
+                    {{ form.badge_id }}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Role</label>
+                        {{ form.role }}
+                    </div>
+                    <div class="col-md-6" id="rank-wrapper">
+                        <label class="form-label">Rank</label>
+                        {{ form.rank }}
+                    </div>
+                </div>
+
+                <hr class="hr-soft">
+
+                <div class="mb-3">
+                    <label class="form-label">Password <span style="color:var(--cv-red)">*</span></label>
+                    {{ form.password1 }}
+                    <div class="form-text">
+                        • At least 8 characters<br>
+                        • Not entirely numeric<br>
+                        • Not too similar to your other details<br>
+                        • Not a commonly used password
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Confirm Password <span style="color:var(--cv-red)">*</span></label>
+                    {{ form.password2 }}
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 justify-content-center py-2">
+                    <i class="bi bi-shield-check"></i> Create Account
+                </button>
+            </form>
+
+            <hr class="hr-soft">
+
+            <div class="text-center small">
+                Already have an account? <a href="{% url 'login' %}">Sign in →</a>
+            </div>
+        </div>
+
+        <div class="text-center mt-3 small" style="color:var(--cv-muted)">
+            <i class="bi bi-info-circle"></i> New accounts are recorded to the immutable ledger
+        </div>
+
+    </div>
+</div>
+
+<script>
+    (function () {
+        // Style every form input with the dark theme
+        document.querySelectorAll('input, select, textarea').forEach(function (el) {
+            if (!el.classList.contains('btn')) {
+                el.classList.add('form-control');
+            }
+            el.setAttribute('autocomplete', 'off');
+            el.setAttribute('autocorrect', 'off');
+            el.setAttribute('autocapitalize', 'off');
+            el.setAttribute('spellcheck', 'false');
+        });
+
+        // Role → Rank filtering
+        var POLICE_RANKS = [
+            ['CONSTABLE', 'Constable'],
+            ['SUB_INSPECTOR', 'Sub-Inspector'],
+            ['INSPECTOR', 'Inspector'],
+            ['DSP', 'Deputy Superintendent'],
+        ];
+        var FORENSIC_RANKS = [
+            ['JR_ANALYST', 'Junior Analyst'],
+            ['ANALYST', 'Analyst'],
+            ['SR_ANALYST', 'Senior Analyst'],
+            ['CHIEF_FORENSIC', 'Chief Forensic Officer'],
+        ];
+        var ADMIN_RANKS = [
+            ['ADMIN_RANK', 'Administrator'],
+        ];
+
+        var roleSelect = document.getElementById('id_role');
+        var rankSelect = document.getElementById('id_rank');
+        var rankWrapper = document.getElementById('rank-wrapper');
+
+        function rebuildRank(pairs) {
+            rankSelect.innerHTML = '';
+            var blank = document.createElement('option');
+            blank.value = '';
+            blank.textContent = '- Select an option -';
+            rankSelect.appendChild(blank);
+            pairs.forEach(function (pair) {
+                var opt = document.createElement('option');
+                opt.value = pair[0];
+                opt.textContent = pair[1];
+                rankSelect.appendChild(opt);
+            });
+        }
+
+        function toggleRank() {
+            if (!roleSelect || !rankWrapper || !rankSelect) return;
+            var value = roleSelect.value;
+
+            if (value === 'JUDGE' || value === 'ADVOCATE') {
+                rankWrapper.style.display = 'none';
+                rankSelect.innerHTML = '';
+                return;
+            }
+
+            rankWrapper.style.display = '';
+
+            if (value === 'OFFICER') {
+                rebuildRank(POLICE_RANKS);
+            } else if (value === 'FORENSICS') {
+                rebuildRank(FORENSIC_RANKS);
+            } else if (value === 'ADMIN') {
+                rebuildRank(ADMIN_RANKS);
+            }
+        }
+
+        if (roleSelect) {
+            roleSelect.addEventListener('change', toggleRank);
+            toggleRank();
+        }
+    })();
+</script>
+
+{% endblock %}

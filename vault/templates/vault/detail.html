@@ -1,0 +1,253 @@
+{% extends 'vault/base.html' %}
+{% block title %}{{ ev.title }} — CaseVault{% endblock %}
+{% block content %}
+
+<!-- ============ HEADER ============ -->
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <div class="mono text-secondary" style="font-size:.8rem">{{ ev.case_number }}</div>
+        <h3 class="mb-1">{{ ev.title }}</h3>
+        <div class="text-secondary small">{{ ev.description|default:"No description." }}</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'evidence_court_package' ev.pk %}" class="btn btn-success">
+            <i class="bi bi-box-seam"></i> Court Package
+        </a>
+        <a href="{% url 'evidence_report' ev.pk %}" class="btn btn-outline-light">
+            <i class="bi bi-printer"></i> View Report
+        </a>
+        <a href="{% url 'evidence_download' ev.pk %}" class="btn btn-outline-light">
+            <i class="bi bi-download"></i> Raw File
+        </a>
+    </div>
+</div>
+
+{% if not file_check.ok %}
+<div class="alert alert-danger mb-3">
+    <strong>TAMPER DETECTED.</strong> {{ file_check.reason }}
+</div>
+{% else %}
+<div class="alert alert-success py-2 mb-3">
+    <i class="bi bi-check-circle"></i> On-disk file matches its recorded fingerprint.
+</div>
+{% endif %}
+
+{% if ev.warrant_expired %}
+<div class="alert alert-danger mb-3">
+    <i class="bi bi-exclamation-octagon-fill"></i>
+    <div><strong>Warrant Expired</strong> on {{ ev.warrant_expiry|date:"F j, Y" }}. Evidence gathered after expiry may
+        be inadmissible.</div>
+</div>
+{% endif %}
+
+<!-- ============ AI SUMMARY (full width) ============ -->
+<div class="card p-3 mb-3"
+    style="border-color:rgba(52,211,153,.25);background:linear-gradient(135deg,rgba(52,211,153,.04),rgba(96,165,250,.04))">
+    <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon" style="background:rgba(52,211,153,.15);color:var(--cv-accent);flex-shrink:0">
+            <i class="bi bi-cpu-fill"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between flex-wrap gap-2 mb-1">
+                <div class="section-eyebrow" style="color:var(--cv-accent)">AI Custody Summary</div>
+                <div>
+                    <span
+                        class="badge-status-{% if risk_level == 'CRITICAL' or risk_level == 'HIGH' %}bad{% else %}ok{% endif %}"
+                        style="font-size:.72rem;padding:.35em .7em">
+                        Risk {{ risk_score }}/100 · {{ risk_level }}
+                    </span>
+                </div>
+            </div>
+            <div style="font-size:.9rem;line-height:1.6;color:var(--cv-text-2)">{{ narrative }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ TWO COLUMNS ============ -->
+<div class="row g-3">
+
+    <!-- ============ LEFT COLUMN ============ -->
+    <div class="col-lg-5">
+
+        <!-- Integrity Fingerprint -->
+        <div class="card p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="text-secondary mb-0">Integrity Fingerprint</h6>
+                <img src="{{ qr_data }}" alt="Verify QR"
+                    style="width:72px;height:72px;border-radius:6px;background:#fff;padding:3px">
+            </div>
+            <div class="mono hash">{{ ev.file_hash }}</div>
+            <hr class="border-secondary">
+            <div class="small">
+                <div><span class="text-secondary">Category:</span> {{ ev.get_category_display }}</div>
+                <div><span class="text-secondary">Classification:</span>
+                    <span class="badge" style="background:rgba(248,113,113,.15);color:#fecaca;font-weight:500">{{
+                        ev.get_sensitivity_display }}</span>
+                </div>
+                {% if ev.warrant_number %}
+                <div><span class="text-secondary">Warrant:</span> <span class="mono">{{ ev.warrant_number }}</span>
+                </div>
+                {% endif %}
+                <div><span class="text-secondary">Size:</span> {{ ev.file_size }} bytes</div>
+                <div><span class="text-secondary">Ingested by:</span> {{ ev.uploaded_by.username }}</div>
+                <div><span class="text-secondary">Ingested at:</span> {{ ev.created_at|date:"Y-m-d H:i:s" }}</div>
+                <div><span class="text-secondary">Custodian:</span>
+                    <span class="badge badge-role">{{ ev.current_custodian.username }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seal Evidence -->
+        {% if ev.is_sealed %}
+        <div class="card p-3 mb-3" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3)">
+            <div style="font-size:.75rem;color:var(--cv-accent);font-weight:600;letter-spacing:.06em">
+                <i class="bi bi-lock-fill"></i> SEALED FOR COURT
+            </div>
+            <div style="font-size:.75rem;color:var(--cv-muted);margin-top:.25rem">
+                {{ ev.seal_reason }} — {{ ev.sealed_at|date:"M j, Y" }}
+            </div>
+        </div>
+        {% elif user.can_transfer and ev.current_custodian_id == user.id %}
+        <div class="card p-3 mb-3">
+            <h6 class="text-secondary mb-2">Seal Evidence</h6>
+            <form method="post" action="{% url 'evidence_seal' ev.pk %}">
+                {% csrf_token %}
+                <input name="reason" class="form-control form-control-sm mb-2"
+                    placeholder="Reason (e.g. Submitted to court)" value="Submitted to court">
+                <button class="btn btn-outline-light btn-sm w-100">
+                    <i class="bi bi-lock"></i> Seal Evidence
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Transfer Custody -->
+        {% if user.can_transfer and ev.current_custodian_id == user.id and not ev.is_sealed %}
+        <div class="card p-3 mb-3" style="border-color:rgba(251,191,36,.4)">
+            <h6 class="text-secondary mb-2">
+                <i class="bi bi-arrow-left-right"></i> Transfer Custody
+            </h6>
+            <form method="post" action="{% url 'evidence_transfer' ev.pk %}">
+                {% csrf_token %}
+                <div class="mb-2">{{ transfer_form.new_custodian }}</div>
+                <div class="mb-2">{{ transfer_form.reason }}</div>
+                <button class="btn btn-warning w-100">
+                    <i class="bi bi-arrow-left-right"></i> Transfer &amp; Log
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Custody Transfer Log -->
+        <div class="card p-3">
+            <h6 class="text-secondary mb-3">
+                <i class="bi bi-arrow-left-right"></i> Custody Transfer Log
+            </h6>
+            {% if ev_transfers %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in ev_transfers %}
+                        <tr>
+                            <td class="mono small" style="color:var(--cv-muted)">{{ t.timestamp|date:"m-d H:i" }}</td>
+                            <td class="mono small">{{ t.details.from|default:"—" }}</td>
+                            <td class="mono small">{{ t.details.to|default:"—" }}</td>
+                            <td>
+                                {% if t.action == 'TRANSFER_ACCEPTED' %}
+                                <span class="badge-status-ok" style="font-size:.65rem">✓</span>
+                                {% elif t.action == 'TRANSFER_REJECTED' %}
+                                <span class="badge-status-bad" style="font-size:.65rem">✗</span>
+                                {% else %}
+                                <span class="badge-role" style="font-size:.65rem">⏳</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-3" style="color:var(--cv-muted);font-size:.82rem">
+                No transfers yet.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ============ RIGHT COLUMN ============ -->
+    <div class="col-lg-7">
+
+        <!-- Chain of Custody timeline -->
+        <div class="card p-3 mb-3">
+            <h6 class="text-secondary mb-3">Chain of Custody (immutable)</h6>
+            <div class="timeline" style="max-height:520px;overflow-y:auto;padding-right:8px">
+                {% for e in entries %}
+                <div class="timeline-item{% if e.action == 'TAMPER_ALERT' %} tl-danger{% endif %}">
+                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                        <strong style="font-size:.88rem">
+                            {% if e.action == 'INGEST' %}<i class="bi bi-box-arrow-in-down text-success"></i>
+                            {% elif e.action == 'DOWNLOAD' %}<i class="bi bi-download text-info"></i>
+                            {% elif e.action == 'TRANSFER_INITIATED' %}<i class="bi bi-arrow-right text-warning"></i>
+                            {% elif e.action == 'TRANSFER_ACCEPTED' %}<i
+                                class="bi bi-arrow-left-right text-success"></i>
+                            {% elif e.action == 'TRANSFER_REJECTED' %}<i class="bi bi-x-circle text-danger"></i>
+                            {% elif e.action == 'TAMPER_ALERT' %}<i class="bi bi-exclamation-octagon text-danger"></i>
+                            {% elif e.action == 'VERIFY' %}<i class="bi bi-patch-check text-success"></i>
+                            {% else %}<i class="bi bi-eye"></i>{% endif %}
+                            {{ e.get_action_display }}
+                        </strong>
+                        <span class="small mono" style="color:var(--cv-muted)">#{{ e.index }} · {{ e.timestamp|date:"M
+                            j, H:i:s" }}</span>
+                    </div>
+                    <div class="small" style="color:var(--cv-text-2)">
+                        by <strong>{{ e.actor.username|default:"system" }}</strong>
+                    </div>
+                    {% if e.signature %}
+                    <div class="mono small" style="color:var(--cv-accent);font-size:.68rem">
+                        <i class="bi bi-shield-fill-check"></i> signed
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Chain Visualization -->
+        <div class="card p-3">
+            <h6 class="text-secondary mb-3">Chain Visualization</h6>
+            <div style="display:flex;align-items:center;gap:4px;overflow-x:auto;padding:6px 2px">
+                {% for e in entries %}
+                <div title="#{{ e.index }} {{ e.get_action_display }}" style="flex:0 0 auto;width:44px;height:56px;border-radius:8px;
+                      background:linear-gradient(180deg,#162032 0%,#0f1826 100%);
+                      border:1px solid var(--cv-line-2);
+                      display:flex;flex-direction:column;align-items:center;justify-content:center;
+                      gap:4px">
+                    <div style="width:6px;height:6px;border-radius:50%;
+                        background:{% if e.action == 'TAMPER_ALERT' %}#f87171{% else %}#34d399{% endif %};
+                        box-shadow:0 0 6px rgba(52,211,153,.6)"></div>
+                    <div class="mono" style="font-size:.6rem;color:var(--cv-muted)">#{{ e.index }}</div>
+                </div>
+                {% if not forloop.last %}
+                <div style="flex:0 0 auto;width:8px;height:2px;background:var(--cv-accent);opacity:.6"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <div class="small mt-2" style="color:var(--cv-muted);font-size:.75rem">
+                <i class="bi bi-info-circle"></i> Each block's prev_hash points to the block on its left.
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

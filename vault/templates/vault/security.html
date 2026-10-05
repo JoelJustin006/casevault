@@ -1,0 +1,280 @@
+{% extends 'vault/base.html' %}
+{% block title %}Security Dashboard — CaseVault{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div>
+        <div class="section-eyebrow">Forensics &amp; Defense</div>
+        <h1 class="page-title mb-0"><i class="bi bi-shield-lock-fill"></i> Security Dashboard</h1>
+    </div>
+    <div class="badge-status-ok"><span class="glow-dot"></span> MONITORING ACTIVE</div>
+</div>
+
+<!-- STATS -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-icon" style="background:rgba(52,211,153,.12);color:var(--cv-accent)">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div>
+                <div class="stat-label">Successful Logins (24h)</div>
+                <div class="stat-value">{{ success_24h }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-icon" style="background:rgba(248,113,113,.12);color:var(--cv-red)">
+                <i class="bi bi-x-octagon-fill"></i>
+            </div>
+            <div>
+                <div class="stat-label">Failed Logins (24h)</div>
+                <div class="stat-value">{{ failed_24h }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-icon" style="background:rgba(251,191,36,.12);color:var(--cv-amber)">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div>
+                <div class="stat-label">Active Lockouts</div>
+                <div class="stat-value">{{ lockouts|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            {% if chain.ok %}
+            <div class="stat-icon" style="background:rgba(52,211,153,.12);color:var(--cv-accent)">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <div>
+                <div class="stat-label">Chain</div>
+                <div class="stat-value" style="font-size:1.2rem;color:var(--cv-accent)">
+                    VERIFIED
+                </div>
+            </div>
+            {% else %}
+            <div class="stat-icon" style="background:rgba(248,113,113,.12);color:var(--cv-red)">
+                <i class="bi bi-shield-x"></i>
+            </div>
+            <div>
+                <div class="stat-label">Chain</div>
+                <div class="stat-value" style="font-size:1.2rem;color:var(--cv-red)">
+                    BROKEN
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- RECENT LOGIN ATTEMPTS -->
+    <div class="col-lg-7">
+        <div class="card overflow-hidden h-100">
+            <div class="p-3" style="border-bottom:1px solid var(--cv-line)">
+                <div class="section-eyebrow mb-0">Recent Login Attempts</div>
+            </div>
+            <div class="table-responsive" style="max-height:440px;overflow-y:auto">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">When</th>
+                            <th scope="col">User</th>
+                            <th scope="col">IP</th>
+                            <th scope="col">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in recent %}
+                        <tr>
+                            <td class="mono" style="color:var(--cv-muted)">{{ a.timestamp|date:"m-d H:i:s" }}</td>
+                            <td>{{ a.username }}</td>
+                            <td class="mono" style="color:var(--cv-blue)">{{ a.ip_address }}</td>
+                            <td>
+                                {% if a.success %}
+                                <span class="badge-status-ok" style="font-size:.7rem">✓ GRANTED</span>
+                                {% else %}
+                                <span class="badge-status-bad" style="font-size:.7rem">✗ DENIED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4" style="color:var(--cv-muted)">No attempts yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP ATTACKER IPS + LOCKOUTS -->
+    <div class="col-lg-5">
+        <div class="card p-3 mb-3">
+            <div class="section-eyebrow mb-3">Top Source IPs (Failed)</div>
+            {% for row in top_ips %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="mono" style="color:var(--cv-blue)">{{ row.ip_address }}</span>
+                <span class="badge-status-bad">{{ row.n }} fails</span>
+            </div>
+            {% empty %}
+            <div style="color:var(--cv-muted);font-size:.85rem">No failed attempts in last 24h. Clean.</div>
+            {% endfor %}
+        </div>
+
+        <div class="card p-3">
+            <div class="section-eyebrow mb-3">Currently Locked Out</div>
+            {% for l in lockouts %}
+            <div class="mb-2">
+                <div style="font-weight:600">{{ l.username }}</div>
+                <div class="mono" style="color:var(--cv-red);font-size:.75rem">
+                    {{ l.ip }} · {{ l.count }} consecutive failures
+                </div>
+            </div>
+            {% empty %}
+            <div style="color:var(--cv-muted);font-size:.85rem">No accounts locked. ✅</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- TAMPER EVENTS -->
+    <div class="col-lg-6">
+        <div class="card overflow-hidden">
+            <div class="p-3" style="border-bottom:1px solid var(--cv-line)">
+                <div class="section-eyebrow mb-0">
+                    <i class="bi bi-exclamation-octagon-fill" style="color:var(--cv-red)"></i>
+                    Tamper Alerts
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height:280px;overflow-y:auto">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">When</th>
+                            <th scope="col">Evidence</th>
+                            <th scope="col">Actor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in tamper_events %}
+                        <tr>
+                            <td class="mono">{{ e.index }}</td>
+                            <td class="mono" style="color:var(--cv-muted)">{{ e.timestamp|date:"m-d H:i" }}</td>
+                            <td>
+                                {% if e.evidence %}
+                                <a href="{% url 'evidence_detail' e.evidence.pk %}">{{ e.evidence.title|truncatechars:24
+                                    }}</a>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>{{ e.actor.username|default:"system" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4" style="color:var(--cv-muted)">
+                                <i class="bi bi-shield-check"></i> No tamper events detected.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVE POLICIES -->
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <div class="section-eyebrow mb-3">Active Security Policies</div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        Content-Security-Policy
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        X-Frame-Options: DENY
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        Referrer-Policy: strict
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        Permissions-Policy: locked
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        CSRF protection
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        Session: HttpOnly, SameSite
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        Login audit trail
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center gap-2" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill" style="color:var(--cv-accent)"></i>
+                        5-fail lockout
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI ANOMALY FEED -->
+<div class="card p-4 mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-eyebrow mb-0">
+            <i class="bi bi-cpu" style="color:var(--cv-accent)"></i> AI Anomaly Detection
+        </div>
+        <a href="{% url 'ai_insights' %}" class="btn btn-outline-light btn-sm">
+            Full AI Insights <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+    <div style="max-height:300px;overflow-y:auto">
+        {% for a in ai_anomalies %}
+        <div class="d-flex align-items-start gap-3 py-2" style="border-bottom:1px solid var(--cv-line)">
+            <i class="bi bi-radar" style="color:
+          {% if a.severity == 'CRITICAL' %}var(--cv-red){% elif a.severity == 'HIGH' %}var(--cv-amber){% elif a.severity == 'MEDIUM' %}var(--cv-blue){% else %}var(--cv-muted){% endif %};
+          margin-top:.2rem"></i>
+            <div class="flex-grow-1">
+                <div style="font-weight:600;font-size:.85rem">{{ a.type|title }}</div>
+                <div class="small" style="color:var(--cv-muted);font-size:.78rem">{{ a.detail }}</div>
+            </div>
+            <span class="mono small" style="color:var(--cv-muted)">{{ a.timestamp|date:"H:i" }}</span>
+        </div>
+        {% empty %}
+        <div class="text-center py-4" style="color:var(--cv-muted)">
+            <i class="bi bi-shield-check"></i> No anomalies detected.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

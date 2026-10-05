@@ -1,0 +1,350 @@
+{% extends 'vault/base.html' %}
+{% block title %}Case {{ case.case_number }} — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        {% if not_found %}
+
+        <div class="card p-5 text-center">
+            <i class="bi bi-folder-x" style="font-size:3rem;color:var(--cv-muted)"></i>
+            <h3 class="mt-3">Case not found</h3>
+            <p style="color:var(--cv-muted)">
+                No case with the number <span class="mono">{{ case_number }}</span> exists in CaseVault.
+            </p>
+            <div class="mt-3">
+                <a href="{% url 'dashboard' %}" class="btn btn-success">
+                    <i class="bi bi-grid-1x2"></i> Return to Dashboard
+                </a>
+            </div>
+        </div>
+
+        {% else %}
+
+        <!-- ============ HEADER ============ -->
+        <div class="text-center mb-4">
+            <div class="section-eyebrow">Public Case Record</div>
+            <h1 class="display-title" style="font-size:2rem">{{ case.case_number }}</h1>
+            <p class="mb-0" style="color:var(--cv-muted);font-size:1.05rem">{{ case.title }}</p>
+        </div>
+
+        <!-- ============ ACTION BUTTONS ============ -->
+        <div class="d-flex justify-content-center gap-2 flex-wrap mb-4">
+            {% if user.is_authenticated %}
+            {% if user.role == 'OFFICER' or user.role == 'ADMIN' %}
+            <a href="{% url 'case_edit' case.case_number %}" class="btn btn-outline-light">
+                <i class="bi bi-pencil"></i> Edit Case Details
+            </a>
+            {% endif %}
+
+            {% if case.status != 'CLOSED' %}
+            {% if user.role == 'OFFICER' or user.role == 'ADMIN' %}
+            <a href="{% url 'case_close' case.case_number %}" class="btn btn-warning">
+                <i class="bi bi-archive-fill"></i> Close This Case
+            </a>
+            {% endif %}
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- ============ STATUS ============ -->
+        <div class="card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="section-eyebrow mb-0">Status</div>
+                <span class="badge"
+                    style="background:{{ case.status_color }}22;color:{{ case.status_color }};border:1px solid {{ case.status_color }}55;padding:.45em 1em;border-radius:8px;font-weight:600">
+                    {{ case.get_status_display }}
+                </span>
+            </div>
+            <p style="color:var(--cv-muted);margin:0">{{ case.description|default:"No description provided." }}</p>
+        </div>
+
+        <!-- ============ STATS ============ -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card p-3 text-center">
+                    <div class="stat-label">Evidence Items</div>
+                    <div class="stat-value">{{ total }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card p-3 text-center">
+                    <div class="stat-label">Sealed for Court</div>
+                    <div class="stat-value" style="color:var(--cv-accent)">{{ sealed }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card p-3 text-center">
+                    <div class="stat-label">Ledger Blocks</div>
+                    <div class="stat-value">{{ ledger_count }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card p-3 text-center">
+                    <div class="stat-label">Chain Integrity</div>
+                    <div class="stat-value"
+                        style="font-size:1.15rem;color:{% if chain.ok %}var(--cv-accent){% else %}var(--cv-red){% endif %}">
+                        {% if chain.ok %}VERIFIED{% else %}BROKEN{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if case.merkle_root %}
+        <div class="card p-4 mb-4" style="border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.04)">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <div class="section-eyebrow mb-2" style="color:var(--cv-accent)">
+                        <i class="bi bi-shield-fill-check"></i> Case Sealed — Merkle Batch
+                    </div>
+                    <div class="mono" style="color:var(--cv-accent);word-break:break-all;font-size:.82rem">{{
+                        case.merkle_root }}</div>
+                    <div class="small mt-2" style="color:var(--cv-muted)">
+                        Sealed {{ case.case_sealed_at|date:"F j, Y, H:i" }} by
+                        {{ case.case_sealed_by.get_full_name|default:case.case_sealed_by.username }}
+                    </div>
+                </div>
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'case_verify_seal' case.case_number %}" class="m-0">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-check-circle"></i> Verify Seal
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% elif user.is_authenticated and user.role == 'OFFICER' or user.role == 'ADMIN' %}
+        <div class="text-center mb-4">
+            <form method="post" action="{% url 'case_seal' case.case_number %}" class="d-inline m-0"
+                onsubmit="return confirm('Seal this entire case? The Merkle root will anchor every file.');">
+                {% csrf_token %}
+                <button class="btn btn-success">
+                    <i class="bi bi-shield-check"></i> Seal Case with Merkle Root
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- ============ CASE TEAM & TIMELINE ============ -->
+        <div class="card p-4 mb-4">
+            <div class="section-eyebrow mb-3">Case Team &amp; Timeline</div>
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Officer Who Took Up the Case</div>
+                    <div style="font-weight:600">
+                        {% if lead %}{{ lead.get_full_name|default:lead.username }}{% else %}—{% endif %}
+                    </div>
+                    {% if lead %}
+                    <div class="mono small" style="color:var(--cv-muted);font-size:.72rem">
+                        {{ lead.rank_label }}{% if lead.badge_id %} · ID {{ lead.badge_id }}{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Date Case Was Opened</div>
+                    <div style="font-weight:600">{{ opened_at|date:"F j, Y, H:i" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Supervising Senior Officer</div>
+                    <div style="font-weight:600">
+                        {% if senior %}
+                        {{ senior.get_full_name|default:senior.username }}
+                        {% else %}
+                        <span class="small" style="color:var(--cv-muted)">Not assigned</span>
+                        {% endif %}
+                    </div>
+                    {% if senior %}
+                    <div class="mono small" style="color:var(--cv-muted);font-size:.72rem">
+                        {{ senior.rank_label }}{% if senior.badge_id %} · ID {{ senior.badge_id }}{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Prosecutor</div>
+                    <div style="font-weight:600">{{ case.prosecutor|default:"—" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Court Date</div>
+                    <div style="font-weight:600">{{ case.court_date|date:"F j, Y"|default:"—" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Last Ledger Update</div>
+                    <div style="font-weight:600">
+                        {% if last_entry %}
+                        {{ last_entry.timestamp|date:"F j, Y, H:i" }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============ CLOSED CASE SUMMARY ============ -->
+        {% if case.status == 'CLOSED' %}
+        <div class="card p-4 mb-4" style="border-color:rgba(52,211,153,.35)">
+            <div class="section-eyebrow mb-3" style="color:var(--cv-accent)">
+                <i class="bi bi-archive-fill"></i> Case Closed — Final Record
+            </div>
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Closed By</div>
+                    <div style="font-weight:600">
+                        {% if case.closed_by %}
+                        {{ case.closed_by.get_full_name|default:case.closed_by.username }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Closed On</div>
+                    <div style="font-weight:600">{{ case.closed_at|date:"F j, Y, H:i"|default:"—" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Final Evidence Disposition</div>
+                    <div style="font-weight:600">{{ case.get_final_custody_display|default:"—" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div style="color:var(--cv-muted);font-size:.8rem">Location / Court Reference</div>
+                    <div style="font-weight:600">{{ case.custody_location|default:"—" }}</div>
+                </div>
+
+                <div class="col-12">
+                    <div style="color:var(--cv-muted);font-size:.8rem;margin-bottom:.35rem">Closing Remarks</div>
+                    <div
+                        style="font-weight:500;white-space:pre-wrap;line-height:1.7;background:rgba(52,211,153,.04);border-left:3px solid var(--cv-accent);padding:.85rem 1rem;border-radius:0 8px 8px 0">
+                        {% if case.closing_remarks %}
+                        {{ case.closing_remarks }}
+                        {% else %}
+                        <span style="color:var(--cv-muted);font-style:italic">No closing remarks recorded.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ============ TRANSFER LOG ============ -->
+        <div class="card p-4 mb-4">
+            <div class="section-eyebrow mb-3">
+                <i class="bi bi-arrow-left-right"></i> Custody Transfer Log
+            </div>
+
+            {% if transfers %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:150px">When</th>
+                            <th>Evidence</th>
+                            <th style="width:130px">From</th>
+                            <th style="width:130px">To</th>
+                            <th style="width:130px">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in transfers %}
+                        <tr>
+                            <td class="mono small" style="color:var(--cv-muted)">{{ t.timestamp|date:"M j, H:i" }}</td>
+                            <td style="font-weight:500">{{ t.evidence.title|default:"—" }}</td>
+                            <td class="mono small">{{ t.details.from|default:"—" }}</td>
+                            <td class="mono small">{{ t.details.to|default:"—" }}</td>
+                            <td>
+                                {% if t.action == 'TRANSFER_ACCEPTED' %}
+                                <span class="badge-status-ok" style="font-size:.68rem">✓ Accepted</span>
+                                {% elif t.action == 'TRANSFER_REJECTED' %}
+                                <span class="badge-status-bad" style="font-size:.68rem">✗ Rejected</span>
+                                {% else %}
+                                <span class="badge-role" style="font-size:.68rem">⏳ Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4" style="color:var(--cv-muted);font-size:.88rem">
+                No custody transfers recorded for this case yet.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ============ SEND TO JUDGE ============ -->
+        {% if user.is_authenticated %}
+        {% if user.role == 'ADMIN' or user.is_senior or case.lead_officer_id == user.id %}
+        <div class="card p-4 mb-4" style="border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.03)">
+            <div class="section-eyebrow mb-3" style="color:#c4b5fd">
+                <i class="bi bi-bank"></i> Submit Case to Judge
+            </div>
+            <p class="small mb-3" style="color:var(--cv-muted)">
+                Sends all evidence in this case to the selected judge for judicial review.
+                Only judges appear in the list below.
+            </p>
+            <form method="post" action="{% url 'case_send_to_judge' case.case_number %}">
+                {% csrf_token %}
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label small">Select Judge</label>
+                        <select name="judge_id" class="form-select" required>
+                            <option value="">— Choose a judge —</option>
+                            {% for j in judges %}
+                            <option value="{{ j.id }}">{{ j.get_full_name|default:j.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-outline-light w-100"
+                            onclick="return confirm('Send this case to the selected judge?');">
+                            <i class="bi bi-send"></i> Send to Judge
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- ============ WHAT THIS PAGE PROVES ============ -->
+        <div class="card p-4 mb-4">
+            <div class="section-eyebrow mb-3">What This Page Proves</div>
+            <p style="color:var(--cv-muted);margin:0">
+                This is a public, tamper-evident record that a case exists and how many items of digital evidence it
+                contains.
+                Every item was fingerprinted with SHA-256 at seizure. Every access since then is on an append-only hash
+                chain.
+                Anyone can independently verify a copy of any file at the
+                <a href="{% url 'verify_portal' %}">public verification portal</a>.
+                <strong style="color:var(--cv-text)">No filenames, hashes, or personnel details are exposed
+                    here.</strong>
+            </p>
+        </div>
+
+        <!-- ============ CTA ============ -->
+        <div class="text-center mb-4">
+            <a href="{% url 'verify_portal' %}" class="btn btn-success px-4">
+                <i class="bi bi-patch-check"></i> Verify a File
+            </a>
+        </div>
+
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock %}

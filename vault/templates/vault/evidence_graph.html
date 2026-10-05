@@ -1,0 +1,73 @@
+{% extends 'vault/base.html' %}
+{% block title %}Evidence Graph — CaseVault{% endblock %}
+{% block content %}
+
+{% if not nodes_json == "[]" %}{% else %}
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle"></i>
+    No evidence in the system yet. Ingest evidence to see the graph populate.
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-3">
+    <div>
+        <div class="section-eyebrow">Relationship Intelligence</div>
+        <h1 class="page-title mb-0"><i class="bi bi-diagram-3-fill"></i> Evidence Linking Graph</h1>
+    </div>
+    <div class="d-flex gap-2 small">
+        <span><span
+                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#60a5fa;margin-right:.3rem"></span>Evidence</span>
+        <span><span
+                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#34d399;margin-right:.3rem"></span>Officer</span>
+        <span><span
+                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#a78bfa;margin-right:.3rem"></span>Case</span>
+    </div>
+</div>
+
+<div class="card p-3">
+    <div id="graph" style="width:100%;height:640px;background:#070a12;border-radius:10px"></div>
+</div>
+
+<div class="small mt-3" style="color:var(--cv-muted)">
+    <i class="bi bi-info-circle"></i>
+    Hover any node for details. Drag to explore. Click-drag on the canvas to pan, scroll to zoom.
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script>
+    var nodes = new vis.DataSet({{ nodes_json| safe }});
+    var edges = new vis.DataSet({{ edges_json| safe }});
+
+    var container = document.getElementById('graph');
+    var data = { nodes: nodes, edges: edges };
+
+    var options = {
+        nodes: {
+            shape: 'dot',
+            size: 16,
+            font: { color: '#f1f5f9', size: 12, face: 'Inter' },
+            borderWidth: 2,
+            borderWidthSelected: 3,
+        },
+        groups: {
+            evidence: { color: { background: '#1e3a8a', border: '#60a5fa' } },
+            officer: { color: { background: '#064e3b', border: '#34d399' }, size: 22 },
+            case: { color: { background: '#4c1d95', border: '#a78bfa' }, size: 26 },
+        },
+        edges: {
+            color: { color: '#475569', highlight: '#34d399' },
+            width: 1,
+            smooth: { type: 'continuous' },
+            font: { color: '#8896b0', size: 10, face: 'JetBrains Mono' },
+        },
+        physics: {
+            stabilization: { iterations: 200 },
+            barnesHut: { gravitationalConstant: -8000, springLength: 120 },
+        },
+        interaction: { hover: true, tooltipDelay: 120 },
+    };
+
+    new vis.Network(container, data, options);
+</script>
+
+{% endblock %}

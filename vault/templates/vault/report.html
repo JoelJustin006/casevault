@@ -1,0 +1,206 @@
+{% extends 'vault/base.html' %}
+{% block title %}Custody Report — {{ ev.case_number }}{% endblock %}
+{% block content %}
+
+<style>
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        body {
+            background: #fff !important;
+            color: #000 !important;
+        }
+
+        .card {
+            background: #fff !important;
+            border: 1px solid #ccc !important;
+            box-shadow: none !important;
+        }
+
+        .hash-inline,
+        .mono {
+            color: #000 !important;
+            background: transparent !important;
+        }
+
+        .timeline::before {
+            background: #999 !important;
+        }
+
+        .timeline-item::before {
+            background: #333 !important;
+            box-shadow: none !important;
+        }
+
+        .badge,
+        .badge-role,
+        .badge-status-ok,
+        .badge-status-bad {
+            color: #000 !important;
+            border-color: #999 !important;
+            background: #eee !important;
+        }
+
+        .section-eyebrow {
+            color: #333 !important;
+        }
+
+        .stat-value {
+            color: #000 !important;
+        }
+
+        .report-header {
+            border-bottom: 2px solid #000 !important;
+        }
+
+        a {
+            color: #000 !important;
+            text-decoration: none !important;
+        }
+    }
+
+    .report-header {
+        border-bottom: 2px solid var(--cv-line);
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .report-meta {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: .4rem 1rem;
+        font-size: .9rem;
+    }
+
+    .report-meta dt {
+        color: var(--cv-muted);
+        font-weight: 500;
+    }
+
+    .report-meta dd {
+        margin: 0;
+        font-family: var(--cv-mono);
+        font-size: .82rem;
+        word-break: break-all;
+    }
+
+    .report-seal {
+        border: 2px solid var(--cv-accent);
+        color: var(--cv-accent);
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        display: inline-block;
+        font-weight: 700;
+        letter-spacing: .08em;
+        font-size: .75rem;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+    <a href="{% url 'evidence_detail' ev.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Evidence
+    </a>
+    <button onclick="window.print()" class="btn btn-success">
+        <i class="bi bi-printer"></i> Print / Save as PDF
+    </button>
+</div>
+
+<div class="card p-4 p-md-5">
+
+    <div class="report-header d-flex justify-content-between align-items-start">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-shield-lock-fill" style="color:var(--cv-accent);font-size:1.5rem"></i>
+                <span style="font-weight:800;font-size:1.15rem">CaseVault</span>
+            </div>
+            <div class="section-eyebrow">Chain of Custody Report</div>
+            <h1 class="display-title mt-1" style="font-size:1.6rem">Evidence Integrity Certificate</h1>
+        </div>
+        <div class="text-end">
+            <div class="report-seal">
+                {% if chain.ok %}✓ CHAIN VERIFIED{% else %}⚠ CHAIN BROKEN{% endif %}
+            </div>
+            <div class="mt-2 small" style="color:var(--cv-muted)">
+                Generated {{ now|date:"F j, Y, H:i" }} UTC
+            </div>
+        </div>
+    </div>
+
+    <h5 class="section-eyebrow mt-3 mb-2">Case</h5>
+    <dl class="report-meta mb-4">
+        <dt>Case Number</dt>
+        <dd>{{ ev.case_number }}</dd>
+        <dt>Evidence Title</dt>
+        <dd style="font-family:inherit;font-size:.95rem">{{ ev.title }}</dd>
+        <dt>Category</dt>
+        <dd>{{ ev.get_category_display }}</dd>
+        <dt>Classification</dt>
+        <dd>{{ ev.get_sensitivity_display }}</dd>
+        <dt>Warrant Number</dt>
+        <dd>{{ ev.warrant_number|default:"—" }}</dd>
+        <dt>Description</dt>
+        <dd style="font-family:inherit;font-size:.9rem">{{ ev.description|default:"—" }}</dd>
+    </dl>
+
+    <h5 class="section-eyebrow mb-2">Integrity</h5>
+    <dl class="report-meta mb-4">
+        <dt>SHA-256 Fingerprint</dt>
+        <dd class="hash-inline">{{ ev.file_hash }}</dd>
+        <dt>File Size</dt>
+        <dd>{{ ev.file_size }} bytes</dd>
+        <dt>Recorded On</dt>
+        <dd>{{ ev.created_at|date:"F j, Y, H:i:s" }} UTC</dd>
+        <dt>On-Disk Check</dt>
+        <dd>
+            {% if file_check.ok %}
+            ✓ MATCH — file on disk is byte-identical to the original fingerprint
+            {% else %}
+            ⚠ MISMATCH — {{ file_check.reason }}
+            {% endif %}
+        </dd>
+    </dl>
+
+    <h5 class="section-eyebrow mb-2">Chain of Custody</h5>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th style="width:60px">#</th>
+                <th>Timestamp</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr>
+                <td class="mono">{{ e.index }}</td>
+                <td class="mono">{{ e.timestamp|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ e.actor.get_full_name|default:e.actor.username|default:"system" }}</td>
+                <td>{{ e.get_action_display }}</td>
+                <td class="mono" style="font-size:.72rem">
+                    {% for k, v in e.details.items %}
+                    {% if k != '_ua' %}{{ k }}={{ v }} {% endif %}
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="mt-4 pt-4" style="border-top:1px solid var(--cv-line)">
+        <p style="font-size:.82rem;color:var(--cv-muted);margin:0">
+            <strong style="color:var(--cv-text)">Certification.</strong>
+            The SHA-256 fingerprint above was computed from the raw bytes of the evidence file at the
+            moment of ingestion. Every subsequent access is recorded as a block on an append-only
+            cryptographic hash chain. Any modification to any block would invalidate all subsequent
+            blocks. Independent verification is available at the CaseVault public portal.
+            This report constitutes a business record maintained in the ordinary course of operations.
+        </p>
+    </div>
+
+</div>
+
+{% endblock %}

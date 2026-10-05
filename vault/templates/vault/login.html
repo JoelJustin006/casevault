@@ -1,0 +1,66 @@
+{% extends 'vault/base.html' %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 72vh;">
+    <div class="col-md-5 col-lg-4">
+
+        <div class="text-center mb-4">
+            <div style="font-size:2.6rem;color:var(--cv-accent);filter:drop-shadow(0 0 24px rgba(52,211,153,.5))">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h1 class="display-title mt-2 mb-1" style="font-size:1.9rem">
+                Case<span style="color:var(--cv-accent)">Vault</span>
+            </h1>
+            <p class="section-eyebrow mb-0">Zero-Knowledge Chain of Custody</p>
+        </div>
+
+        <div class="card p-4">
+            <div class="section-eyebrow mb-3">Secure Login</div>
+
+            <form method="post">
+                {% csrf_token %}
+                {% if locked_out %}
+                <div class="alert alert-danger py-2 mb-3">
+                    <i class="bi bi-hourglass-split"></i>
+                    <div><strong>Account temporarily locked.</strong><br>
+                        Too many failed attempts. Try again in 15 seconds.</div>
+                </div>
+                {% elif form.errors %}
+
+                <div class="alert alert-danger py-2 mb-3">
+                    <i class="bi bi-exclamation-triangle"></i> Invalid credentials.
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input name="username" class="form-control" required autofocus autocomplete="off" autocorrect="off"
+                        autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input name="password" type="password" class="form-control" required autocomplete="new-password"
+                        autocorrect="off" autocapitalize="off" spellcheck="false">
+                </div>
+
+                <button class="btn btn-success w-100 justify-content-center py-2">
+                    <i class="bi bi-fingerprint"></i> Authenticate
+                </button>
+            </form>
+
+            <hr class="hr-soft">
+            <div class="text-center small mb-3" style="color:var(--cv-muted)">
+                <i class="bi bi-shield-lock"></i> End-to-end custody integrity guaranteed by SHA-256
+            </div>
+            <div class="text-center small">
+                <a href="{% url 'register' %}">Register a new account →</a>
+            </div>
+        </div>
+
+        <div class="text-center mt-3 small" style="color:var(--cv-muted)">
+            <i class="bi bi-lock-fill"></i> All access is recorded to an append-only ledger
+        </div>
+
+    </div>
+</div>
+{% endblock %}

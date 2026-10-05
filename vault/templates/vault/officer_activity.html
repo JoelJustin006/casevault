@@ -1,0 +1,149 @@
+{% extends 'vault/base.html' %}
+{% block title %}Officer Activity — CaseVault{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+    <div class="section-eyebrow">Senior Command View</div>
+    <h1 class="page-title mb-0"><i class="bi bi-people-fill"></i> Officer Activity</h1>
+</div>
+
+<!-- OFFICER STATS TABLE -->
+<div class="card overflow-hidden mb-4">
+    <div class="p-3" style="border-bottom:1px solid var(--cv-line)">
+        <div class="section-eyebrow mb-0">Active Personnel</div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Officer</th>
+                    <th>Rank</th>
+                    <th>Role</th>
+                    <th>In Custody</th>
+                    <th>Uploads</th>
+                    <th>Downloads</th>
+                    <th>Transfers</th>
+                    <th>Total Actions</th>
+                    <th>Last Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td>
+                        <i class="bi bi-person-circle me-1" style="color:var(--cv-muted)"></i>
+                        <strong>{{ r.officer.get_full_name|default:r.officer.username }}</strong>
+                    </td>
+                    <td><span class="badge-role">{{ r.officer.rank_label }}</span></td>
+                    <td class="small">{{ r.officer.get_role_display }}</td>
+                    <td class="mono">{{ r.in_custody }}</td>
+                    <td class="mono">{{ r.uploads }}</td>
+                    <td class="mono">{{ r.downloads }}</td>
+                    <td class="mono">{{ r.transfers }}</td>
+                    <td class="mono" style="font-weight:700">{{ r.total_actions }}</td>
+                    <td class="small" style="color:var(--cv-muted)">
+                        {% if r.last_action %}{{ r.last_action.timestamp|date:"M j, H:i" }}{% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-4" style="color:var(--cv-muted)">No officers found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CASE ASSIGNMENTS -->
+<div class="card overflow-hidden mb-4">
+    <div class="p-3" style="border-bottom:1px solid var(--cv-line)">
+        <div class="section-eyebrow mb-0">Case Assignments</div>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Case #</th>
+                    <th>Title</th>
+                    <th>Lead Officer</th>
+                    <th>Senior Officer</th>
+                    <th>Opened</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in cases %}
+                <tr>
+                    <td class="mono">{{ c.case_number }}</td>
+                    <td style="font-weight:500">{{ c.title }}</td>
+                    <td>
+                        {% if c.lead_officer %}
+                        <i class="bi bi-person-badge me-1" style="color:var(--cv-blue)"></i>
+                        {{ c.lead_officer.get_full_name|default:c.lead_officer.username }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if c.senior_officer %}
+                        <i class="bi bi-star-fill me-1" style="color:var(--cv-amber)"></i>
+                        {{ c.senior_officer.get_full_name|default:c.senior_officer.username }}
+                        {% else %}<span class="small" style="color:var(--cv-muted)">Unassigned</span>{% endif %}
+                    </td>
+                    <td class="small" style="color:var(--cv-muted)">{{ c.created_at|date:"M j, Y" }}</td>
+                    <td>
+                        <span class="badge"
+                            style="background:{{ c.status_color }}22;color:{{ c.status_color }};border:1px solid {{ c.status_color }}55;padding:.35em .8em;border-radius:8px;font-weight:600;font-size:.72rem">
+                            {{ c.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- LIVE ACTIVITY FEED -->
+<div class="card overflow-hidden">
+    <div class="p-3" style="border-bottom:1px solid var(--cv-line)">
+        <div class="section-eyebrow mb-0">Live Activity Feed (Last 80 Events)</div>
+    </div>
+    <div style="max-height:500px;overflow-y:auto">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>When</th>
+                    <th>Officer</th>
+                    <th>Action</th>
+                    <th>Evidence</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in recent %}
+                <tr>
+                    <td class="mono">{{ e.index }}</td>
+                    <td class="mono small" style="color:var(--cv-muted)">{{ e.timestamp|date:"m-d H:i" }}</td>
+                    <td>{{ e.actor.get_full_name|default:e.actor.username|default:"system" }}</td>
+                    <td>
+                        <span class="badge bg-secondary" style="font-size:.7rem">{{ e.get_action_display }}</span>
+                    </td>
+                    <td class="small">
+                        {% if e.evidence %}
+                        <a href="{% url 'evidence_detail' e.evidence.pk %}">{{ e.evidence.title|truncatechars:28 }}</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="small mono" style="color:var(--cv-muted);font-size:.72rem">
+                        {% for k, v in e.details.items %}
+                        {% if k != '_ua' and k != '_ip' %}{{ k }}={{ v }} {% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

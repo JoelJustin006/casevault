@@ -1,0 +1,56 @@
+{% extends 'vault/base.html' %}
+{% block title %}Access Denied — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center align-items-center" style="min-height:70vh">
+    <div class="col-md-7 col-lg-6 text-center">
+
+        <div class="mb-4" style="font-size:5rem;color:var(--cv-red);filter:drop-shadow(0 0 30px rgba(248,113,113,.5))">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <div class="section-eyebrow mb-2" style="color:var(--cv-red)">Access Denied · 403</div>
+        <h1 class="display-title mb-3" style="font-size:2.2rem">Restricted Area</h1>
+
+        <p class="mb-4" style="color:var(--cv-muted);font-size:1.05rem;line-height:1.7">
+            Your account does not have clearance to view this page.
+            This section is reserved for <strong style="color:var(--cv-text)">higher authorities</strong>
+            and <strong style="color:var(--cv-text)">forensic personnel</strong> only.
+        </p>
+
+        <div class="card p-4 mb-4 text-start" style="border-color:rgba(248,113,113,.3)">
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-info-circle-fill" style="color:var(--cv-blue);font-size:1.3rem;margin-top:.15rem"></i>
+                <div>
+                    <div style="font-weight:600;margin-bottom:.35rem">What can I do?</div>
+                    <ul class="mb-0 small" style="color:var(--cv-muted);padding-left:1.1rem">
+                        <li>Contact your supervising officer to request elevated access.</li>
+                        <li>If you believe this is an error, verify your role and rank in <a
+                                href="{% url 'profile' %}">your profile</a>.</li>
+                        <li>All access attempts are recorded to the immutable ledger for audit.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="small mb-4" style="color:var(--cv-muted)">
+            Signed in as <strong style="color:var(--cv-text)">{{ user.username }}</strong>
+            {% if user.rank %}· {{ user.rank_label }}{% endif %}
+            {% if user.role %}· {{ user.get_role_display }}{% endif %}
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="{% url 'dashboard' %}" class="btn btn-success px-4">
+                <i class="bi bi-grid-1x2"></i> Return to Dashboard
+            </a>
+            <button onclick="history.back()" class="btn btn-outline-light px-4">
+                <i class="bi bi-arrow-left"></i> Go Back
+            </button>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

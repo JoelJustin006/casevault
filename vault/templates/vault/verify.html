@@ -1,0 +1,49 @@
+{% extends 'vault/base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card p-4">
+            <div class="text-center mb-4">
+                <div style="font-size:2.2rem;color:var(--cv-accent);filter:drop-shadow(0 0 20px rgba(52,211,153,.4))">
+                    <i class="bi bi-patch-check-fill"></i>
+                </div>
+                <h1 class="display-title mt-2 mb-1" style="font-size:1.6rem">Independent Verification</h1>
+                <p class="text-secondary small mb-0">No login required. Upload any file to prove — or disprove — its
+                    integrity.</p>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="file" class="form-control mb-3" required>
+                <button class="btn btn-success w-100">Verify Integrity</button>
+            </form>
+
+            {% if result %}
+            <hr class="border-secondary">
+            <div class="small text-secondary">Computed SHA-256:</div>
+            <div class="mono hash mb-3">{{ result.digest }}</div>
+
+            {% if result.matches %}
+            <div class="alert alert-success">
+                <strong><i class="bi bi-check-circle-fill"></i> MATCH FOUND.</strong>
+                This file is byte-identical to {{ result.matches|length }} item(s) in the vault.
+            </div>
+            {% for m in result.matches %}
+            <div class="card p-3 mb-2">
+                <div><strong>{{ m.title }}</strong> <span class="mono text-secondary">({{ m.case_number }})</span></div>
+                <div class="small text-secondary">
+                    Ingested {{ m.created_at|date:"Y-m-d H:i" }} by {{ m.uploaded_by.username }} ·
+                    Custodian: {{ m.current_custodian.username }}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="alert alert-warning">
+                <strong>NO MATCH.</strong> This file does not correspond to any evidence in the vault —
+                it has been altered, or was never submitted.
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

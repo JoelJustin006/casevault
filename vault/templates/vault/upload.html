@@ -1,0 +1,138 @@
+{% extends 'vault/base.html' %}
+{% block title %}Ingest Evidence — CaseVault{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+
+        <div class="text-center mb-4">
+            <div style="font-size:2.4rem;color:var(--cv-accent);filter:drop-shadow(0 0 20px rgba(52,211,153,.5))">
+                <i class="bi bi-box-arrow-in-down"></i>
+            </div>
+            <h1 class="display-title mt-2 mb-1" style="font-size:1.7rem">Ingest Evidence</h1>
+            <p class="section-eyebrow mb-0">Hash &amp; Anchor to the Ledger</p>
+        </div>
+
+        <div class="alert alert-info mb-3" style="font-size:.88rem">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                Need to set up a new case first?
+                <a href="{% url 'case_create' %}">Create the case</a> with full officer/prosecutor/court details,
+                then come back here to attach evidence. Or just type a new case number below — a minimal case gets
+                created automatically.
+            </div>
+        </div>
+
+        <div class="card p-4">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 mb-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <div>{{ form.non_field_errors.0 }}</div>
+                </div>
+                {% endif %}
+
+                {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    <div class="form-text">{{ field.help_text }}</div>
+                    {% for error in field.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-success w-100 justify-content-center py-2">
+                    <i class="bi bi-fingerprint"></i> Hash &amp; Ingest
+                </button>
+            </form>
+        </div>
+
+        <div class="text-center mt-3 small" style="color:var(--cv-muted)">
+            <i class="bi bi-shield-lock"></i> A SHA-256 fingerprint is computed before storage
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Style inputs
+    document.querySelectorAll('input, textarea, select').forEach(function (el) {
+        if (el.tagName === 'SELECT') {
+            el.classList.add('form-select');
+        } else if (!el.classList.contains('btn')) {
+            el.classList.add('form-control');
+        }
+        el.setAttribute('autocomplete', 'off');
+        el.setAttribute('autocorrect', 'off');
+        el.setAttribute('autocapitalize', 'off');
+        el.setAttribute('spellcheck', 'false');
+    });
+
+    // ---- Live file/category validation ----
+    const CATEGORY_EXTENSIONS = {
+        'CCTV': ['.mp4', '.avi', '.mkv', '.mov', '.webm', '.m4v', '.mpeg', '.mpg'],
+        'MOBILE': ['.zip', '.tar', '.gz', '.7z', '.bin', '.img'],
+        'DISK': ['.img', '.iso', '.dd', '.bin', '.e01', '.raw'],
+        'USB': ['.zip', '.tar', '.img', '.bin', '.iso'],
+        'LOG': ['.log', '.txt', '.csv', '.json', '.xml'],
+        'IMAGE': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.heic'],
+        'DOC': ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt', '.xls', '.xlsx'],
+        'OTHER': null,
+    };
+
+    const fileInput = document.getElementById('id_file');
+    const categorySel = document.getElementById('id_category');
+    const submitBtn = document.querySelector('button[type="submit"]');
+
+    // Insert error container under the file input
+    let fileErrorEl = null;
+    if (fileInput) {
+        fileErrorEl = document.createElement('div');
+        fileErrorEl.className = 'text-danger small mt-1';
+        fileErrorEl.style.display = 'none';
+        fileInput.parentNode.insertBefore(fileErrorEl, fileInput.nextSibling);
+    }
+
+    function validateFile() {
+        if (!fileInput || !categorySel || !fileErrorEl) return true;
+        const file = fileInput.files[0];
+        const category = categorySel.value;
+        const allowed = CATEGORY_EXTENSIONS[category];
+
+        // No file yet, or no category, or "OTHER" — clear and pass
+        if (!file || !allowed) {
+            fileErrorEl.style.display = 'none';
+            fileErrorEl.textContent = '';
+            if (submitBtn) submitBtn.disabled = false;
+            return true;
+        }
+
+        const name = file.name.toLowerCase();
+        const ok = allowed.some(ext => name.endsWith(ext));
+
+        if (!ok) {
+            const niceCategory = categorySel.options[categorySel.selectedIndex].text;
+            fileErrorEl.textContent =
+                'File type mismatch. "' + niceCategory + '" expects: ' +
+                allowed.join(', ') + '. You picked: ' + file.name;
+            fileErrorEl.style.display = 'block';
+            if (submitBtn) submitBtn.disabled = true;
+            return false;
+        }
+
+        fileErrorEl.style.display = 'none';
+        fileErrorEl.textContent = '';
+        if (submitBtn) submitBtn.disabled = false;
+        return true;
+    }
+
+    if (fileInput) fileInput.addEventListener('change', validateFile);
+    if (categorySel) categorySel.addEventListener('change', validateFile);
+    validateFile();
+</script>
+
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'vault/base.html' %}
+{% block title %}Pending Actions — CaseVault{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+    <div class="section-eyebrow">Officer Inbox</div>
+    <h1 class="page-title mb-0"><i class="bi bi-inbox-fill"></i> Pending Actions</h1>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card p-4 h-100">
+            <div class="section-eyebrow mb-3">Awaiting My Countersignature ({{ incoming|length }})</div>
+            {% for t in incoming %}
+            <div class="p-3 mb-3"
+                style="background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.25);border-radius:10px">
+                <div style="font-weight:600">{{ t.evidence.title }}</div>
+                <div class="small mb-2" style="color:var(--cv-muted)">
+                    From <strong>{{ t.from_user.get_full_name|default:t.from_user.username }}</strong>
+                    · {{ t.initiated_at|date:"M j, H:i" }}
+                </div>
+                <div class="small mb-3" style="color:var(--cv-text-2)">{{ t.reason }}</div>
+                <div class="d-flex gap-2">
+                    <form method="post" action="{% url 'transfer_accept' t.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-success btn-sm"><i class="bi bi-pen"></i> Countersign &amp;
+                            Accept</button>
+                    </form>
+                    <form method="post" action="{% url 'transfer_reject' t.pk %}" class="d-inline"
+                        onsubmit="return confirm('Reject this transfer?');">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-danger btn-sm">Reject</button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5" style="color:var(--cv-muted)">
+                <i class="bi bi-check-circle" style="font-size:2rem;opacity:.4"></i>
+                <div class="mt-2">Nothing awaiting your signature.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card p-4 h-100">
+            <div class="section-eyebrow mb-3">My Outgoing Transfers ({{ outgoing|length }})</div>
+            {% for t in outgoing %}
+            <div class="p-3 mb-3"
+                style="background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:10px">
+                <div style="font-weight:600">{{ t.evidence.title }}</div>
+                <div class="small mb-2" style="color:var(--cv-muted)">
+                    To <strong>{{ t.to_user.get_full_name|default:t.to_user.username }}</strong>
+                    · sent {{ t.initiated_at|date:"M j, H:i" }}
+                </div>
+                <div class="small mb-2" style="color:var(--cv-text-2)">{{ t.reason }}</div>
+                <span class="badge" style="background:rgba(251,191,36,.2);color:#fcd34d;font-size:.7rem">
+                    <i class="bi bi-hourglass-split"></i> Awaiting countersignature
+                </span>
+            </div>
+            {% empty %}
+            <div class="text-center py-5" style="color:var(--cv-muted)">
+                <i class="bi bi-inbox" style="font-size:2rem;opacity:.4"></i>
+                <div class="mt-2">No outgoing transfers.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
